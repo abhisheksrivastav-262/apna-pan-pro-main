@@ -84,6 +84,27 @@ const emptyFiles: FilesState = {
   payment_screenshot: null,
 };
 
+type ApplicationType = "dob_proof" | "no_dob_proof";
+
+const APPLICATION_TYPES: { key: ApplicationType; title: string; price: number; tag: string; desc: string; tone: "success" | "warning" }[] = [
+  {
+    key: "dob_proof",
+    title: "DOB Proof Uploaded",
+    price: 139,
+    tag: "Recommended",
+    desc: "Includes Aadhaar + valid DOB proof document.",
+    tone: "success",
+  },
+  {
+    key: "no_dob_proof",
+    title: "DOB Proof Not Available",
+    price: 199,
+    tag: "Higher charge",
+    desc: "Used when no DOB proof can be uploaded with the application.",
+    tone: "warning",
+  },
+];
+
 type ApplicationCtx = {
   form: FormFields;
   setForm: React.Dispatch<React.SetStateAction<FormFields>>;
@@ -95,6 +116,8 @@ type ApplicationCtx = {
   success: string | null;
   setSuccess: React.Dispatch<React.SetStateAction<string | null>>;
   onSubmit: (e: React.FormEvent) => Promise<void>;
+  applicationType: ApplicationType;
+  setApplicationType: React.Dispatch<React.SetStateAction<ApplicationType>>;
 };
 
 const ApplicationContext = createContext<ApplicationCtx | null>(null);
@@ -111,6 +134,7 @@ function ApplicationProvider({ children }: { children: React.ReactNode }) {
   const [files, setFiles] = useState<FilesState>(emptyFiles);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
+  const [applicationType, setApplicationType] = useState<ApplicationType>("dob_proof");
   const submitFn = useServerFn(submitApplication);
 
   const uploadFile = useCallback(async (file: File, folder: string): Promise<string> => {
@@ -209,6 +233,8 @@ function ApplicationProvider({ children }: { children: React.ReactNode }) {
         success,
         setSuccess,
         onSubmit,
+        applicationType,
+        setApplicationType,
       }}
     >
       {children}
@@ -441,7 +467,7 @@ function PricingSection() {
 
 
 function ApplicationForm() {
-  const { form, setForm, errors, setErrors, files, setFiles, success, setSuccess, onSubmit } = useApplicationContext();
+  const { form, setForm, errors, setErrors, files, setFiles, success, setSuccess, onSubmit, applicationType, setApplicationType } = useApplicationContext();
 
   const change = (k: keyof FormFields) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -450,6 +476,8 @@ function ApplicationForm() {
 
   if (success) return <SuccessCard id={success} onReset={() => setSuccess(null)} />;
 
+  const selectedPlan = APPLICATION_TYPES.find((t) => t.key === applicationType)!;
+
   return (
     <section id="apply" className="container mx-auto px-4 pb-20">
       <div className="mx-auto mb-10 max-w-2xl text-center">
@@ -457,6 +485,76 @@ function ApplicationForm() {
         <p className="mt-2 text-muted-foreground">
           Fill in your details exactly as per Aadhaar and upload required documents.
         </p>
+      </div>
+
+      {/* Application Type Selector */}
+      <div className="mx-auto mb-6 max-w-4xl">
+        <div className="mb-3 flex items-center gap-2">
+          <IndianRupee className="h-5 w-5 text-primary" />
+          <span className="text-base font-semibold">Select Application Type</span>
+          <span className="text-destructive">*</span>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {APPLICATION_TYPES.map((plan) => {
+            const isSelected = applicationType === plan.key;
+            return (
+              <button
+                key={plan.key}
+                type="button"
+                onClick={() => setApplicationType(plan.key)}
+                className={cn(
+                  "relative overflow-hidden rounded-2xl border-2 bg-card p-5 text-left shadow-[var(--shadow-soft)] transition-all duration-200 hover:shadow-[var(--shadow-elegant)]",
+                  isSelected
+                    ? plan.tone === "success"
+                      ? "border-success ring-2 ring-success/30"
+                      : "border-warning ring-2 ring-warning/30"
+                    : "border-border hover:border-muted-foreground/40",
+                )}
+              >
+                {/* Tag */}
+                <div
+                  className={cn(
+                    "absolute right-3 top-3 rounded-full px-2.5 py-0.5 text-[10px] font-semibold",
+                    plan.tone === "success" ? "bg-success/15 text-success" : "bg-warning/20 text-warning-foreground",
+                  )}
+                >
+                  {plan.tag}
+                </div>
+
+                {/* Icon */}
+                <div
+                  className={cn(
+                    "mb-3 inline-grid h-10 w-10 place-items-center rounded-xl",
+                    plan.tone === "success" ? "bg-success text-success-foreground" : "bg-warning text-warning-foreground",
+                  )}
+                >
+                  {plan.tone === "success" ? <CheckCircle2 className="h-5 w-5" /> : <AlertTriangle className="h-5 w-5" />}
+                </div>
+
+                <div className="pr-16">
+                  <div className="font-semibold">{plan.title}</div>
+                  <div className="mt-0.5 text-xs text-muted-foreground">{plan.desc}</div>
+                </div>
+
+                <div className="mt-4 flex items-baseline gap-1">
+                  <IndianRupee className="h-5 w-5 text-foreground" />
+                  <span className="text-3xl font-bold">{plan.price}</span>
+                  <span className="ml-1 text-xs text-muted-foreground">/ application</span>
+                </div>
+
+                {/* Selected indicator */}
+                {isSelected && (
+                  <div
+                    className={cn(
+                      "absolute bottom-0 left-0 right-0 h-1 rounded-b-2xl",
+                      plan.tone === "success" ? "bg-success" : "bg-warning",
+                    )}
+                  />
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <form id="apply-form" onSubmit={onSubmit} className="mx-auto max-w-4xl space-y-6">
@@ -578,7 +676,8 @@ function SuccessCard({ id, onReset }: { id: string; onReset: () => void }) {
 }
 
 function PaymentSection() {
-  const { files, setFiles, submitting, success, onSubmit } = useApplicationContext();
+  const { files, setFiles, submitting, success, onSubmit, applicationType } = useApplicationContext();
+  const selectedPlan = APPLICATION_TYPES.find((t) => t.key === applicationType)!;
 
   if (success) return null;
 
@@ -617,20 +716,53 @@ function PaymentSection() {
             </ul>
           </div>
           <div className="flex flex-col items-center justify-center gap-5 p-8">
-            <div className="rounded-2xl border-2 border-dashed border-border bg-muted p-4">
-              <img
-                src={PAYMENT_QR_IMAGE}
-                alt="UPI payment QR code for Apna PAN Agency"
-                className="h-[420px] w-[380px] rounded-md bg-white object-contain"
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).style.display = "none";
-                  const sib = e.currentTarget.nextElementSibling as HTMLElement | null;
-                  if (sib) sib.style.display = "flex";
-                }}
-              />
-              <div className="hidden h-[420px] w-[380px] flex-col items-center justify-center rounded-md bg-white text-center text-xs text-muted-foreground">
-                <QrCode className="mb-2 h-16 w-16 opacity-40" />
-                QR code not available
+            <div className="flex flex-col items-center gap-3">
+              <div className="rounded-2xl border-2 border-dashed border-border bg-muted p-4">
+                <img
+                  src={PAYMENT_QR_IMAGE}
+                  alt="UPI payment QR code for Apna PAN Agency"
+                  className="h-[420px] w-[380px] rounded-md bg-white object-contain"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).style.display = "none";
+                    const sib = e.currentTarget.nextElementSibling as HTMLElement | null;
+                    if (sib) sib.style.display = "flex";
+                  }}
+                />
+                <div className="hidden h-[420px] w-[380px] flex-col items-center justify-center rounded-md bg-white text-center text-xs text-muted-foreground">
+                  <QrCode className="mb-2 h-16 w-16 opacity-40" />
+                  QR code not available
+                </div>
+              </div>
+
+              {/* Amount to pay badge */}
+              <div
+                className={cn(
+                  "flex w-full items-center justify-between rounded-xl border-2 px-5 py-3",
+                  selectedPlan.tone === "success"
+                    ? "border-success/40 bg-success/10"
+                    : "border-warning/40 bg-warning/10",
+                )}
+              >
+                <div>
+                  <div className="text-xs font-medium text-muted-foreground">Pay exact amount for</div>
+                  <div className="mt-0.5 text-sm font-semibold">{selectedPlan.title}</div>
+                </div>
+                <div className="flex items-baseline gap-0.5">
+                  <IndianRupee
+                    className={cn(
+                      "h-6 w-6 font-bold",
+                      selectedPlan.tone === "success" ? "text-success" : "text-warning-foreground",
+                    )}
+                  />
+                  <span
+                    className={cn(
+                      "text-4xl font-extrabold",
+                      selectedPlan.tone === "success" ? "text-success" : "text-warning-foreground",
+                    )}
+                  >
+                    {selectedPlan.price}
+                  </span>
+                </div>
               </div>
             </div>
             <div className="w-full max-w-sm">
