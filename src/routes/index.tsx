@@ -43,18 +43,66 @@ const SUPPORT_EMAIL = "contactgrowthnation@gmail.com";
 const SUPPORT_PHONE = "+91 8018923277";
 const PAYMENT_QR_IMAGE = "https://lh7-rt.googleusercontent.com/formsz/AN7BsVAfsHw86vNhlMgD0vz99Pn-IrNsrwCa9iAB6b1j5VybZ5QNoW-Lyo1KjKY0OtaHa1pmsOKGRr6Kw745vLmGc7SobUQE_FRjWMdMzaCi4xdT1YNrg-gVzAI_01zIfP8uG5rMoKFeqvVrTk5WJ95KlFu4_DRXY6yPO9PJ-XwD5dhlcM5ARRd3ms_mLQPe4a-jZSqr68hLFx0lUerkS8NbMYA=w339?key=BlLx_XPd1UAour9X2CCc8w";
 
+// Helpers
+const nameRegex = /^[A-Za-z\s.]+$/;
+const addressRegex = /^[A-Za-z0-9\s.,/-]+$/;
+
 const formSchema = z.object({
-  agency_mobile: z.string().trim().regex(/^\d{10,15}$/, "Enter a valid mobile number"),
-  customer_mobile: z.string().trim().regex(/^\d{10,15}$/, "Enter a valid mobile number"),
-  email: z.string().trim().email("Enter a valid email"),
-  full_name: z.string().trim().min(2, "Required").max(120),
-  father_name: z.string().trim().min(2, "Required").max(120),
-  mother_name: z.string().trim().min(2, "Required").max(120),
-  village: z.string().trim().min(1, "Required").max(120),
-  post_office: z.string().trim().min(1, "Required").max(120),
-  city: z.string().trim().min(1, "Required").max(120),
-  district: z.string().trim().min(1, "Required").max(120),
-  pin_code: z.string().trim().regex(/^\d{4,10}$/, "Enter a valid pin code"),
+  agency_mobile: z
+    .string()
+    .trim()
+    .regex(/^\d{10}$/, "Must be exactly 10 digits"),
+  customer_mobile: z
+    .string()
+    .trim()
+    .regex(/^\d{10}$/, "Must be exactly 10 digits"),
+  email: z.string().trim().email("Enter a valid email address"),
+  full_name: z
+    .string()
+    .trim()
+    .min(3, "Name must be at least 3 characters")
+    .max(120, "Name is too long")
+    .regex(nameRegex, "Only letters and spaces allowed — no numbers or symbols"),
+  father_name: z
+    .string()
+    .trim()
+    .min(3, "Name must be at least 3 characters")
+    .max(120, "Name is too long")
+    .regex(nameRegex, "Only letters and spaces allowed — no numbers or symbols"),
+  mother_name: z
+    .string()
+    .trim()
+    .min(3, "Name must be at least 3 characters")
+    .max(120, "Name is too long")
+    .regex(nameRegex, "Only letters and spaces allowed — no numbers or symbols"),
+  village: z
+    .string()
+    .trim()
+    .min(2, "Village name is required")
+    .max(120)
+    .regex(addressRegex, "Invalid characters in village name"),
+  post_office: z
+    .string()
+    .trim()
+    .min(2, "Post office name is required")
+    .max(120)
+    .regex(addressRegex, "Invalid characters in post office name"),
+  city: z
+    .string()
+    .trim()
+    .min(2, "City name is required")
+    .max(120)
+    .regex(nameRegex, "Only letters and spaces allowed"),
+  district: z
+    .string()
+    .trim()
+    .min(2, "District name is required")
+    .max(120)
+    .regex(nameRegex, "Only letters and spaces allowed"),
+  pin_code: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, "PIN code must be exactly 6 digits"),
 });
 
 type FormFields = z.infer<typeof formSchema>;
@@ -84,9 +132,24 @@ const emptyFiles: FilesState = {
   payment_screenshot: null,
 };
 
-type ApplicationType = "dob_proof" | "no_dob_proof";
+// Per-field hint text shown below inputs
+const FIELD_HINTS: Partial<Record<keyof FormFields, string>> = {
+  agency_mobile: "Your registered 10-digit Apna PAN Agency mobile number",
+  customer_mobile: "Customer's 10-digit mobile number",
+  email: "Valid email — used for communication",
+  full_name: "Enter full name exactly as on Aadhaar — letters only",
+  father_name: "Father's full name — letters only, no numbers",
+  mother_name: "Mother's full name — letters only, no numbers",
+  village: "Village or locality name",
+  post_office: "Nearest post office name",
+  city: "City or town name — letters only",
+  district: "District name — letters only",
+  pin_code: "6-digit postal PIN code",
+};
 
-const APPLICATION_TYPES: { key: ApplicationType; title: string; price: number; tag: string; desc: string; tone: "success" | "warning" }[] = [
+type ApplicationType = "dob_proof" | "no_dob_proof" | null;
+
+const APPLICATION_TYPES: { key: NonNullable<ApplicationType>; title: string; price: number; tag: string; desc: string; tone: "success" | "warning" }[] = [
   {
     key: "dob_proof",
     title: "DOB Proof Uploaded",
@@ -110,6 +173,8 @@ type ApplicationCtx = {
   setForm: React.Dispatch<React.SetStateAction<FormFields>>;
   errors: Partial<Record<keyof FormFields, string>>;
   setErrors: React.Dispatch<React.SetStateAction<Partial<Record<keyof FormFields, string>>>>;
+  touched: Partial<Record<keyof FormFields, boolean>>;
+  setTouched: React.Dispatch<React.SetStateAction<Partial<Record<keyof FormFields, boolean>>>>;
   files: FilesState;
   setFiles: React.Dispatch<React.SetStateAction<FilesState>>;
   submitting: boolean;
@@ -118,6 +183,8 @@ type ApplicationCtx = {
   onSubmit: (e: React.FormEvent) => Promise<void>;
   applicationType: ApplicationType;
   setApplicationType: React.Dispatch<React.SetStateAction<ApplicationType>>;
+  applicationTypeError: boolean;
+  setApplicationTypeError: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
 const ApplicationContext = createContext<ApplicationCtx | null>(null);
@@ -131,10 +198,12 @@ function useApplicationContext() {
 function ApplicationProvider({ children }: { children: React.ReactNode }) {
   const [form, setForm] = useState<FormFields>(emptyForm);
   const [errors, setErrors] = useState<Partial<Record<keyof FormFields, string>>>({});
+  const [touched, setTouched] = useState<Partial<Record<keyof FormFields, boolean>>>({});
   const [files, setFiles] = useState<FilesState>(emptyFiles);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
-  const [applicationType, setApplicationType] = useState<ApplicationType>("dob_proof");
+  const [applicationType, setApplicationType] = useState<ApplicationType>(null);
+  const [applicationTypeError, setApplicationTypeError] = useState(false);
   const submitFn = useServerFn(submitApplication);
 
   const uploadFile = useCallback(async (file: File, folder: string): Promise<string> => {
@@ -162,6 +231,14 @@ function ApplicationProvider({ children }: { children: React.ReactNode }) {
     e.preventDefault();
     if (submitting) return;
 
+    // 1. Application type must be selected
+    if (!applicationType) {
+      setApplicationTypeError(true);
+      toast.error("Please select an application type before submitting");
+      document.getElementById("application-type-selector")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+
     const parsed = formSchema.safeParse(form);
     if (!parsed.success) {
       const fe: Partial<Record<keyof FormFields, string>> = {};
@@ -176,7 +253,7 @@ function ApplicationProvider({ children }: { children: React.ReactNode }) {
 
     const fileErr =
       validateFile(files.aadhaar, "pdf", true, "Aadhaar PDF") ||
-      validateFile(files.dob_proof, "pdf", false, "DOB Proof") ||
+      validateFile(files.dob_proof, "pdf", applicationType === "dob_proof", "DOB Proof") ||
       validateFile(files.photo, "image", true, "Photograph") ||
       validateFile(files.signature, "image", true, "Signature") ||
       validateFile(files.payment_screenshot, "image", true, "Payment screenshot");
@@ -227,6 +304,8 @@ function ApplicationProvider({ children }: { children: React.ReactNode }) {
         setForm,
         errors,
         setErrors,
+        touched,
+        setTouched,
         files,
         setFiles,
         submitting,
@@ -235,6 +314,8 @@ function ApplicationProvider({ children }: { children: React.ReactNode }) {
         onSubmit,
         applicationType,
         setApplicationType,
+        applicationTypeError,
+        setApplicationTypeError,
       }}
     >
       {children}
@@ -252,7 +333,7 @@ function Home() {
       <TrustBar />
       <InstructionsSection />
       <TermsSection />
-      <PricingSection />
+      {/* <PricingSection /> */}
       <ApplicationProvider>
         <ApplicationForm />
         <PaymentSection />
@@ -467,16 +548,38 @@ function PricingSection() {
 
 
 function ApplicationForm() {
-  const { form, setForm, errors, setErrors, files, setFiles, success, setSuccess, onSubmit, applicationType, setApplicationType } = useApplicationContext();
+  const { form, setForm, errors, setErrors, touched, setTouched, files, setFiles, success, setSuccess, onSubmit, applicationType, setApplicationType, applicationTypeError, setApplicationTypeError } = useApplicationContext();
 
   const change = (k: keyof FormFields) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((f) => ({ ...f, [k]: e.target.value }));
+    // Clear error while typing so user sees feedback disappear
     if (errors[k]) setErrors((er) => ({ ...er, [k]: undefined }));
+  };
+
+  // Validate a single field on blur
+  const blur = (k: keyof FormFields) => () => {
+    setTouched((t) => ({ ...t, [k]: true }));
+    const result = formSchema.shape[k].safeParse(form[k]);
+    if (!result.success) {
+      setErrors((er) => ({ ...er, [k]: result.error.issues[0].message }));
+    } else {
+      setErrors((er) => ({ ...er, [k]: undefined }));
+    }
+  };
+
+  // Block non-numeric keypresses for number-only inputs
+  const numericOnly = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!/[\d\b]/.test(e.key) && !e.ctrlKey && !e.metaKey && e.key.length === 1) e.preventDefault();
+  };
+
+  // Block digits for name fields
+  const alphaOnly = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (/\d/.test(e.key) && e.key.length === 1) e.preventDefault();
   };
 
   if (success) return <SuccessCard id={success} onReset={() => setSuccess(null)} />;
 
-  const selectedPlan = APPLICATION_TYPES.find((t) => t.key === applicationType)!;
+  const selectedPlan = applicationType ? APPLICATION_TYPES.find((t) => t.key === applicationType) ?? null : null;;
 
   return (
     <section id="apply" className="container mx-auto px-4 pb-20">
@@ -488,27 +591,44 @@ function ApplicationForm() {
       </div>
 
       {/* Application Type Selector */}
-      <div className="mx-auto mb-6 max-w-4xl">
-        <div className="mb-3 flex items-center gap-2">
-          <IndianRupee className="h-5 w-5 text-primary" />
-          <span className="text-base font-semibold">Select Application Type</span>
-          <span className="text-destructive">*</span>
+      <div id="application-type-selector" className="mx-auto mb-6 max-w-4xl">
+        <div className="mb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <IndianRupee className="h-5 w-5 text-primary" />
+            <span className={cn("text-base font-semibold", applicationTypeError ? "text-destructive" : "")}>
+              Select Application Type
+            </span>
+            <span className="text-destructive">*</span>
+          </div>
+          {applicationTypeError && (
+            <span className="flex items-center gap-1 text-xs font-medium text-destructive">
+              <AlertTriangle className="h-3.5 w-3.5" /> Please select one to continue
+            </span>
+          )}
         </div>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className={cn(
+          "grid gap-4 sm:grid-cols-2 rounded-2xl transition-all duration-200",
+          applicationTypeError ? "ring-2 ring-destructive/50 p-3 bg-destructive/5" : "",
+        )}>
           {APPLICATION_TYPES.map((plan) => {
             const isSelected = applicationType === plan.key;
             return (
               <button
                 key={plan.key}
                 type="button"
-                onClick={() => setApplicationType(plan.key)}
+                onClick={() => {
+                  setApplicationType(plan.key);
+                  setApplicationTypeError(false);
+                }}
                 className={cn(
                   "relative overflow-hidden rounded-2xl border-2 bg-card p-5 text-left shadow-[var(--shadow-soft)] transition-all duration-200 hover:shadow-[var(--shadow-elegant)]",
                   isSelected
                     ? plan.tone === "success"
                       ? "border-success ring-2 ring-success/30"
                       : "border-warning ring-2 ring-warning/30"
-                    : "border-border hover:border-muted-foreground/40",
+                    : applicationTypeError
+                      ? "border-destructive/60 hover:border-destructive"
+                      : "border-border hover:border-muted-foreground/40",
                 )}
               >
                 {/* Tag */}
@@ -555,43 +675,203 @@ function ApplicationForm() {
             );
           })}
         </div>
+        {applicationTypeError && (
+          <p className="mt-2 flex items-center gap-1.5 text-sm font-medium text-destructive">
+            <AlertTriangle className="h-4 w-4" />
+            You must select an application type to proceed.
+          </p>
+        )}
       </div>
 
       <form id="apply-form" onSubmit={onSubmit} className="mx-auto max-w-4xl space-y-6">
         <Card title="Applicant Details" icon={FileText}>
           <Grid>
-            <Field label="Apna PAN Agency Registered Mobile Number" required error={errors.agency_mobile}>
-              <Input inputMode="numeric" value={form.agency_mobile} onChange={change("agency_mobile")} placeholder="10-digit mobile" />
+            <Field
+              label="Apna PAN Agency Registered Mobile Number"
+              required
+              error={errors.agency_mobile}
+              touched={touched.agency_mobile}
+              valid={touched.agency_mobile && !errors.agency_mobile}
+              hint={FIELD_HINTS.agency_mobile}
+            >
+              <Input
+                inputMode="numeric"
+                value={form.agency_mobile}
+                onChange={change("agency_mobile")}
+                onBlur={blur("agency_mobile")}
+                onKeyDown={numericOnly}
+                placeholder="10-digit mobile"
+                maxLength={10}
+              />
             </Field>
-            <Field label="Customer Mobile Number" required error={errors.customer_mobile}>
-              <Input inputMode="numeric" value={form.customer_mobile} onChange={change("customer_mobile")} placeholder="10-digit mobile" />
+            <Field
+              label="Customer Mobile Number"
+              required
+              error={errors.customer_mobile}
+              touched={touched.customer_mobile}
+              valid={touched.customer_mobile && !errors.customer_mobile}
+              hint={FIELD_HINTS.customer_mobile}
+            >
+              <Input
+                inputMode="numeric"
+                value={form.customer_mobile}
+                onChange={change("customer_mobile")}
+                onBlur={blur("customer_mobile")}
+                onKeyDown={numericOnly}
+                placeholder="10-digit mobile"
+                maxLength={10}
+              />
             </Field>
-            <Field label="Email ID" required error={errors.email}>
-              <Input type="email" value={form.email} onChange={change("email")} placeholder="name@example.com" />
+            <Field
+              label="Email ID"
+              required
+              error={errors.email}
+              touched={touched.email}
+              valid={touched.email && !errors.email}
+              hint={FIELD_HINTS.email}
+            >
+              <Input
+                type="email"
+                value={form.email}
+                onChange={change("email")}
+                onBlur={blur("email")}
+                placeholder="name@example.com"
+              />
             </Field>
-            <Field label="Full Name (As per Aadhaar)" required error={errors.full_name}>
-              <Input value={form.full_name} onChange={change("full_name")} />
+            <Field
+              label="Full Name (As per Aadhaar)"
+              required
+              error={errors.full_name}
+              touched={touched.full_name}
+              valid={touched.full_name && !errors.full_name}
+              hint={FIELD_HINTS.full_name}
+            >
+              <Input
+                value={form.full_name}
+                onChange={change("full_name")}
+                onBlur={blur("full_name")}
+                onKeyDown={alphaOnly}
+                maxLength={120}
+                placeholder="As printed on Aadhaar"
+              />
             </Field>
-            <Field label="Father Name" required error={errors.father_name}>
-              <Input value={form.father_name} onChange={change("father_name")} />
+            <Field
+              label="Father Name"
+              required
+              error={errors.father_name}
+              touched={touched.father_name}
+              valid={touched.father_name && !errors.father_name}
+              hint={FIELD_HINTS.father_name}
+            >
+              <Input
+                value={form.father_name}
+                onChange={change("father_name")}
+                onBlur={blur("father_name")}
+                onKeyDown={alphaOnly}
+                maxLength={120}
+                placeholder="Father's full name"
+              />
             </Field>
-            <Field label="Mother Name" required error={errors.mother_name}>
-              <Input value={form.mother_name} onChange={change("mother_name")} />
+            <Field
+              label="Mother Name"
+              required
+              error={errors.mother_name}
+              touched={touched.mother_name}
+              valid={touched.mother_name && !errors.mother_name}
+              hint={FIELD_HINTS.mother_name}
+            >
+              <Input
+                value={form.mother_name}
+                onChange={change("mother_name")}
+                onBlur={blur("mother_name")}
+                onKeyDown={alphaOnly}
+                maxLength={120}
+                placeholder="Mother's full name"
+              />
             </Field>
-            <Field label="Village" required error={errors.village}>
-              <Input value={form.village} onChange={change("village")} />
+            <Field
+              label="Village"
+              required
+              error={errors.village}
+              touched={touched.village}
+              valid={touched.village && !errors.village}
+              hint={FIELD_HINTS.village}
+            >
+              <Input
+                value={form.village}
+                onChange={change("village")}
+                onBlur={blur("village")}
+                maxLength={120}
+                placeholder="Village / locality"
+              />
             </Field>
-            <Field label="Post Office" required error={errors.post_office}>
-              <Input value={form.post_office} onChange={change("post_office")} />
+            <Field
+              label="Post Office"
+              required
+              error={errors.post_office}
+              touched={touched.post_office}
+              valid={touched.post_office && !errors.post_office}
+              hint={FIELD_HINTS.post_office}
+            >
+              <Input
+                value={form.post_office}
+                onChange={change("post_office")}
+                onBlur={blur("post_office")}
+                maxLength={120}
+                placeholder="Nearest post office"
+              />
             </Field>
-            <Field label="City" required error={errors.city}>
-              <Input value={form.city} onChange={change("city")} />
+            <Field
+              label="City"
+              required
+              error={errors.city}
+              touched={touched.city}
+              valid={touched.city && !errors.city}
+              hint={FIELD_HINTS.city}
+            >
+              <Input
+                value={form.city}
+                onChange={change("city")}
+                onBlur={blur("city")}
+                onKeyDown={alphaOnly}
+                maxLength={120}
+                placeholder="City or town"
+              />
             </Field>
-            <Field label="District" required error={errors.district}>
-              <Input value={form.district} onChange={change("district")} />
+            <Field
+              label="District"
+              required
+              error={errors.district}
+              touched={touched.district}
+              valid={touched.district && !errors.district}
+              hint={FIELD_HINTS.district}
+            >
+              <Input
+                value={form.district}
+                onChange={change("district")}
+                onBlur={blur("district")}
+                onKeyDown={alphaOnly}
+                maxLength={120}
+                placeholder="District name"
+              />
             </Field>
-            <Field label="Pin Code" required error={errors.pin_code}>
-              <Input inputMode="numeric" value={form.pin_code} onChange={change("pin_code")} />
+            <Field
+              label="Pin Code"
+              required
+              error={errors.pin_code}
+              touched={touched.pin_code}
+              valid={touched.pin_code && !errors.pin_code}
+              hint={FIELD_HINTS.pin_code}
+            >
+              <Input
+                inputMode="numeric"
+                value={form.pin_code}
+                onChange={change("pin_code")}
+                onBlur={blur("pin_code")}
+                onKeyDown={numericOnly}
+                maxLength={6}
+                placeholder="6-digit PIN"
+              />
             </Field>
           </Grid>
         </Card>
@@ -677,7 +957,7 @@ function SuccessCard({ id, onReset }: { id: string; onReset: () => void }) {
 
 function PaymentSection() {
   const { files, setFiles, submitting, success, onSubmit, applicationType } = useApplicationContext();
-  const selectedPlan = APPLICATION_TYPES.find((t) => t.key === applicationType)!;
+  const selectedPlan = applicationType ? APPLICATION_TYPES.find((t) => t.key === applicationType) ?? null : null;
 
   if (success) return null;
 
@@ -735,35 +1015,44 @@ function PaymentSection() {
               </div>
 
               {/* Amount to pay badge */}
-              <div
-                className={cn(
-                  "flex w-full items-center justify-between rounded-xl border-2 px-5 py-3",
-                  selectedPlan.tone === "success"
-                    ? "border-success/40 bg-success/10"
-                    : "border-warning/40 bg-warning/10",
-                )}
-              >
-                <div>
-                  <div className="text-xs font-medium text-muted-foreground">Pay exact amount for</div>
-                  <div className="mt-0.5 text-sm font-semibold">{selectedPlan.title}</div>
+              {selectedPlan ? (
+                <div
+                  className={cn(
+                    "flex w-full items-center justify-between rounded-xl border-2 px-5 py-3",
+                    selectedPlan.tone === "success"
+                      ? "border-success/40 bg-success/10"
+                      : "border-warning/40 bg-warning/10",
+                  )}
+                >
+                  <div>
+                    <div className="text-xs font-medium text-muted-foreground">Pay exact amount for</div>
+                    <div className="mt-0.5 text-sm font-semibold">{selectedPlan.title}</div>
+                  </div>
+                  <div className="flex items-baseline gap-0.5">
+                    <IndianRupee
+                      className={cn(
+                        "h-6 w-6 font-bold",
+                        selectedPlan.tone === "success" ? "text-success" : "text-warning-foreground",
+                      )}
+                    />
+                    <span
+                      className={cn(
+                        "text-4xl font-extrabold",
+                        selectedPlan.tone === "success" ? "text-success" : "text-warning-foreground",
+                      )}
+                    >
+                      {selectedPlan.price}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-baseline gap-0.5">
-                  <IndianRupee
-                    className={cn(
-                      "h-6 w-6 font-bold",
-                      selectedPlan.tone === "success" ? "text-success" : "text-warning-foreground",
-                    )}
-                  />
-                  <span
-                    className={cn(
-                      "text-4xl font-extrabold",
-                      selectedPlan.tone === "success" ? "text-success" : "text-warning-foreground",
-                    )}
-                  >
-                    {selectedPlan.price}
-                  </span>
+              ) : (
+                <div className="flex w-full items-center gap-3 rounded-xl border-2 border-dashed border-muted-foreground/30 bg-muted/40 px-5 py-3">
+                  <AlertTriangle className="h-5 w-5 shrink-0 text-muted-foreground" />
+                  <div className="text-sm text-muted-foreground">
+                    Select an application type above to see the amount to pay.
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
             <div className="w-full max-w-sm">
               <FileField
@@ -891,15 +1180,41 @@ function Grid({ children }: { children: React.ReactNode }) {
 }
 
 function Field({
-  label, required, error, children,
-}: { label: string; required?: boolean; error?: string; children: React.ReactNode }) {
+  label, required, error, touched, valid, hint, children,
+}: {
+  label: string;
+  required?: boolean;
+  error?: string;
+  touched?: boolean;
+  valid?: boolean;
+  hint?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="space-y-1.5">
-      <Label className="text-sm">
-        {label} {required && <span className="text-destructive">*</span>}
-      </Label>
-      {children}
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      <div className="flex items-center justify-between">
+        <Label className={cn("text-sm", error && touched ? "text-destructive" : "")}>
+          {label} {required && <span className="text-destructive">*</span>}
+        </Label>
+        {valid && (
+          <span className="flex items-center gap-1 text-[11px] font-medium text-success">
+            <CheckCircle2 className="h-3.5 w-3.5" /> Valid
+          </span>
+        )}
+      </div>
+      <div className={cn(
+        "rounded-md transition-all",
+        error && touched ? "ring-2 ring-destructive/40" : valid ? "ring-2 ring-success/30" : "",
+      )}>
+        {children}
+      </div>
+      {error && touched ? (
+        <p className="flex items-center gap-1 text-xs text-destructive">
+          <AlertTriangle className="h-3 w-3 shrink-0" /> {error}
+        </p>
+      ) : hint && !valid ? (
+        <p className="text-[11px] text-muted-foreground">{hint}</p>
+      ) : null}
     </div>
   );
 }
