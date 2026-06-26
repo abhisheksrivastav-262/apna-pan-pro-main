@@ -23,7 +23,7 @@ import {
   Calendar,
 } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/admin/documents")({
+export const Route = createFileRoute("/_authenticated/admin/documents/")({
   component: DocsPage,
 });
 

@@ -13,6 +13,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { CheckCircle2, ExternalLink, XCircle, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -55,6 +62,7 @@ function PaymentsPage() {
               <TableHead>Customer</TableHead>
               <TableHead>Mobile</TableHead>
               <TableHead>Amount</TableHead>
+              <TableHead>Screenshot</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Date</TableHead>
               <TableHead>Actions</TableHead>
@@ -63,7 +71,7 @@ function PaymentsPage() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   Loading…
                 </TableCell>
               </TableRow>
@@ -81,6 +89,38 @@ function PaymentsPage() {
                   </TableCell>
                   <TableCell>{r.customer_mobile}</TableCell>
                   <TableCell>₹{r.dob_proof_url ? 139 : 199}</TableCell>
+                  <TableCell>
+                    {r.payment_screenshot_url ? (
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <button className="relative block h-10 w-16 overflow-hidden rounded border bg-muted group">
+                            <img 
+                              src={r.payment_screenshot_url} 
+                              alt="Payment" 
+                              className="h-full w-full object-cover group-hover:opacity-50 transition-opacity" 
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <ImageIcon className="h-4 w-4 text-white" />
+                            </div>
+                          </button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-3xl">
+                          <DialogHeader>
+                            <DialogTitle>Payment Screenshot - {r.full_name}</DialogTitle>
+                          </DialogHeader>
+                          <div className="flex justify-center p-4">
+                            <img 
+                              src={r.payment_screenshot_url} 
+                              alt="Payment full size" 
+                              className="max-w-full max-h-[70vh] object-contain rounded-md"
+                            />
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    ) : (
+                      <span className="text-xs text-muted-foreground italic">No image</span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     {r.payment_verified_at ? (
                       <Badge className="bg-emerald-500/15 text-emerald-700 border border-emerald-500/30">
@@ -102,13 +142,6 @@ function PaymentsPage() {
                           <ExternalLink className="h-4 w-4" />
                         </Button>
                       </Link>
-                      {r.payment_screenshot_url && (
-                        <a href={r.payment_screenshot_url} target="_blank" rel="noreferrer" title="View screenshot">
-                          <Button variant="ghost" size="sm">
-                            <ImageIcon className="h-4 w-4" />
-                          </Button>
-                        </a>
-                      )}
                       {!r.payment_verified_at ? (
                         <Button
                           size="sm"

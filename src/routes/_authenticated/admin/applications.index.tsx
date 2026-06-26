@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export const Route = createFileRoute("/_authenticated/admin/applications")({
+export const Route = createFileRoute("/_authenticated/admin/applications/")({
   component: ApplicationsPage,
 });
 
@@ -141,7 +141,8 @@ function ApplicationsPage() {
             <TableRow>
               <TableHead>App No</TableHead>
               <TableHead>Name</TableHead>
-              <TableHead>Mobile</TableHead>
+              <TableHead>Cust Mobile</TableHead>
+              <TableHead>Agency Mobile</TableHead>
               <TableHead>District</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Payment</TableHead>
@@ -153,7 +154,7 @@ function ApplicationsPage() {
             {isLoading
               ? Array.from({ length: 6 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell colSpan={8}>
+                    <TableCell colSpan={9}>
                       <Skeleton className="h-8 w-full" />
                     </TableCell>
                   </TableRow>
@@ -163,6 +164,7 @@ function ApplicationsPage() {
                     <TableCell className="font-mono text-xs">{r.application_no || "—"}</TableCell>
                     <TableCell className="font-medium">{r.full_name}</TableCell>
                     <TableCell>{r.customer_mobile}</TableCell>
+                    <TableCell>{r.agency_mobile || "—"}</TableCell>
                     <TableCell>{r.district}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className={statusVariants[r.application_status] ?? ""}>
@@ -196,7 +198,7 @@ function ApplicationsPage() {
                 ))}
             {!isLoading && rows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-muted-foreground py-12">
+                <TableCell colSpan={9} className="text-center text-muted-foreground py-12">
                   No applications found.
                 </TableCell>
               </TableRow>

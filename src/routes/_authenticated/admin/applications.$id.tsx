@@ -304,7 +304,7 @@ function AppDetail() {
               <Field label="Mother's name" value={app.mother_name} />
               <Field label="Email" value={app.email} />
               <Field label="Customer mobile" value={app.customer_mobile} />
-              <Field label="Agency mobile" value={app.agency_mobile} />
+              <Field label="Apna PAN Agency Registered Mobile Number *" value={app.agency_mobile} />
             </div>
           </Card>
 
