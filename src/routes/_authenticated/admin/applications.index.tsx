@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Download, Search, RefreshCw } from "lucide-react";
+import { Download, Search, RefreshCw, FileX } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -24,8 +24,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 
-export const Route = createFileRoute("/_authenticated/admin/applications")({
+export const Route = createFileRoute("/_authenticated/admin/applications/")({
   component: ApplicationsPage,
 });
 
@@ -141,7 +142,8 @@ function ApplicationsPage() {
             <TableRow>
               <TableHead>App No</TableHead>
               <TableHead>Name</TableHead>
-              <TableHead>Mobile</TableHead>
+              <TableHead>Cust Mobile</TableHead>
+              <TableHead>Agency Mobile</TableHead>
               <TableHead>District</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Payment</TableHead>
@@ -152,9 +154,14 @@ function ApplicationsPage() {
           <TableBody>
             {isLoading
               ? Array.from({ length: 6 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell colSpan={8}>
-                      <Skeleton className="h-8 w-full" />
+                  <TableRow key={i} className="hover:bg-transparent">
+                    {Array.from({ length: 8 }).map((_, j) => (
+                      <TableCell key={j}>
+                        <Skeleton className="h-6 w-full opacity-60" />
+                      </TableCell>
+                    ))}
+                    <TableCell>
+                      <Skeleton className="h-6 w-12 opacity-60" />
                     </TableCell>
                   </TableRow>
                 ))
@@ -163,6 +170,7 @@ function ApplicationsPage() {
                     <TableCell className="font-mono text-xs">{r.application_no || "—"}</TableCell>
                     <TableCell className="font-medium">{r.full_name}</TableCell>
                     <TableCell>{r.customer_mobile}</TableCell>
+                    <TableCell>{r.agency_mobile || "—"}</TableCell>
                     <TableCell>{r.district}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className={statusVariants[r.application_status] ?? ""}>
@@ -195,9 +203,13 @@ function ApplicationsPage() {
                   </TableRow>
                 ))}
             {!isLoading && rows.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center text-muted-foreground py-12">
-                  No applications found.
+              <TableRow className="hover:bg-transparent">
+                <TableCell colSpan={9} className="p-0">
+                  <EmptyState 
+                    icon={FileX} 
+                    title="No applications found" 
+                    description={q || statusFilter !== 'all' ? "Try adjusting your search filters to find what you're looking for." : "When customers submit new PAN applications, they will appear here."} 
+                  />
                 </TableCell>
               </TableRow>
             )}

@@ -271,9 +271,9 @@ function DocDetail() {
 
   if (isLoading || !data) {
     return (
-      <div className="flex items-center justify-center min-h-[300px] gap-2 text-muted-foreground">
-        <Loader2 className="h-5 w-5 animate-spin text-primary" />
-        <span className="font-medium">Loading application and documents…</span>
+      <div className="flex flex-col items-center justify-center min-h-[400px] text-muted-foreground animate-in fade-in-50">
+        <Loader2 className="h-8 w-8 animate-spin mb-4 text-primary/60" />
+        <p className="text-sm">Loading documents...</p>
       </div>
     );
   }

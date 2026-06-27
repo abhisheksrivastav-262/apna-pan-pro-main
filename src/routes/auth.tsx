@@ -29,17 +29,21 @@ function AuthPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    console.log("Attempting login with email:", email);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    console.log("Login response -> data:", data, "error:", error);
     setLoading(false);
     if (error) {
+      console.error("Login failed with error:", error);
       setError(error.message);
       return;
     }
+    console.log("Login successful! Navigating to dashboard...");
     navigate({ to: "/admin/dashboard" });
   }
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-2 bg-background">
+    <div className="min-h-screen grid lg:grid-cols-2 bg-background" suppressHydrationWarning>
       <div className="hidden lg:flex relative overflow-hidden bg-gradient-to-br from-primary via-primary/90 to-primary/60 p-12 flex-col justify-between text-primary-foreground">
         <div className="flex items-center gap-2 font-semibold">
           <ShieldCheck className="h-6 w-6" /> Apna PAN Agency
