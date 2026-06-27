@@ -106,6 +106,10 @@ const formSchema = z.object({
     .min(2, "District name is required")
     .max(120)
     .regex(nameRegex, "Only letters and spaces allowed"),
+  state: z
+    .string()
+    .trim()
+    .min(2, "State is required"),
   pin_code: z
     .string()
     .trim()
@@ -117,7 +121,7 @@ type FormFields = z.infer<typeof formSchema>;
 const emptyForm: FormFields = {
   agency_mobile: "", customer_mobile: "", email: "", full_name: "",
   father_name: "", mother_name: "", village: "", post_office: "",
-  city: "", district: "", pin_code: "",
+  city: "", district: "", state: "", pin_code: "",
 };
 
 const MAX_PDF = 5 * 1024 * 1024;
@@ -151,8 +155,48 @@ const FIELD_HINTS: Partial<Record<keyof FormFields, string>> = {
   post_office: "Nearest post office name",
   city: "City or town name — letters only",
   district: "District name — letters only",
+  state: "Select your State / Union Territory",
   pin_code: "6-digit postal PIN code",
 };
+
+const INDIAN_STATES = [
+  "Andaman and Nicobar Islands",
+  "Andhra Pradesh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Bihar",
+  "Chandigarh",
+  "Chhattisgarh",
+  "Dadra and Nagar Haveli and Daman and Diu",
+  "Delhi",
+  "Goa",
+  "Gujarat",
+  "Haryana",
+  "Himachal Pradesh",
+  "Jammu and Kashmir",
+  "Jharkhand",
+  "Karnataka",
+  "Kerala",
+  "Ladakh",
+  "Lakshadweep",
+  "Madhya Pradesh",
+  "Maharashtra",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Odisha",
+  "Puducherry",
+  "Punjab",
+  "Rajasthan",
+  "Sikkim",
+  "Tamil Nadu",
+  "Telangana",
+  "Tripura",
+  "Uttar Pradesh",
+  "Uttarakhand",
+  "West Bengal",
+];
 
 type ApplicationType = "dob_proof" | "no_dob_proof" | null;
 
@@ -402,7 +446,7 @@ function Hero() {
             Trusted by thousands of applicants
           </div>
           <h1 className="text-balance text-4xl font-bold leading-tight tracking-tight md:text-6xl">
-            Apply for New PAN Card & PAN Correction Online
+            Apply for New PAN Card Online
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-pretty text-base text-white/80 md:text-lg">
             Fast, secure & paperless PAN application process — handled end‑to‑end by Apna PAN Agency.
@@ -418,6 +462,11 @@ function Hero() {
                 <MessageCircle className="mr-1.5 h-4 w-4" /> WhatsApp Support
               </Button>
             </a>
+            <Link to={"/track"}>
+
+              <Button size="lg" className="bg-success text-success-foreground hover:bg-success/90 shadow-[var(--shadow-glow)]">
+                Track Status <ArrowRight className="ml-1.5 h-4 w-4" />
+              </Button></Link>
           </div>
         </div>
       </div>
@@ -799,6 +848,34 @@ function ApplicationForm() {
                 maxLength={120}
                 placeholder="District name"
               />
+            </Field>
+            <Field
+              label="State / Union Territory"
+              required
+              error={errors.state}
+              touched={touched.state}
+              valid={touched.state && !errors.state}
+              hint={FIELD_HINTS.state}
+            >
+              <Select
+                value={form.state || ""}
+                onValueChange={(val) => {
+                  setForm((f) => ({ ...f, state: val }));
+                  if (errors.state) setErrors((er) => ({ ...er, state: undefined }));
+                  setTouched((t) => ({ ...t, state: true }));
+                }}
+              >
+                <SelectTrigger className={cn("w-full h-11", errors.state && touched.state ? "border-destructive ring-1 ring-destructive" : "")}>
+                  <SelectValue placeholder="Select state" />
+                </SelectTrigger>
+                <SelectContent>
+                  {INDIAN_STATES.map((st) => (
+                    <SelectItem key={st} value={st}>
+                      {st}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Field>
             <Field
               label="Pin Code"

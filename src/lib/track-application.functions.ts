@@ -7,7 +7,7 @@ export const trackApplication = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: app, error } = await supabaseAdmin
       .from("pan_applications")
-      .select("id, application_no, full_name, application_status, status_reason, status_updated_at, created_at, payment_verified_at")
+      .select("id, application_no, full_name, application_status, status_reason, status_updated_at, created_at, payment_verified_at, admin_notes(note, created_at)")
       .eq("application_no", data.application_no.trim().toUpperCase())
       .maybeSingle();
 
