@@ -23,6 +23,7 @@ const statusVariants: Record<string, string> = {
   payment_pending: "bg-orange-500/15 text-orange-700 border-orange-500/30",
   need_more_documents: "bg-pink-500/15 text-pink-700 border-pink-500/30",
   hold: "bg-orange-500/15 text-orange-700 border-orange-500/30",
+  refund: "bg-fuchsia-500/15 text-fuchsia-700 border-fuchsia-500/30",
 };
 
 function TrackPage() {
@@ -198,6 +199,24 @@ function TrackPage() {
                     Reason / Note from Admin
                   </h4>
                   <p className="text-sm text-amber-800 leading-relaxed">{result.status_reason}</p>
+                </div>
+              )}
+              {result.admin_notes && result.admin_notes.length > 0 && (
+                <div className="mt-6 rounded-xl bg-gradient-to-r from-blue-500/10 to-blue-500/5 border border-blue-500/20 p-5 shadow-sm">
+                  <h4 className="font-semibold text-blue-700 text-sm mb-2 flex items-center gap-2">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-500/20 text-xs">i</span>
+                    Admin Notes
+                  </h4>
+                  <div className="space-y-3">
+                    {result.admin_notes.map((n: any, i: number) => (
+                      <div key={i} className="text-sm text-blue-800 leading-relaxed">
+                        <span className="text-xs opacity-70 block mb-1">
+                          {new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(n.created_at))}
+                        </span>
+                        {n.note}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

@@ -105,6 +105,7 @@ export type Database = {
           status_updated_by: string | null
           submission_status: string
           village: string
+          state: string
         }
         Insert: {
           aadhaar_url: string
@@ -134,6 +135,7 @@ export type Database = {
           status_updated_by?: string | null
           submission_status?: string
           village: string
+          state: string
         }
         Update: {
           aadhaar_url?: string
@@ -163,6 +165,7 @@ export type Database = {
           status_updated_by?: string | null
           submission_status?: string
           village?: string
+          state?: string
         }
         Relationships: []
       }

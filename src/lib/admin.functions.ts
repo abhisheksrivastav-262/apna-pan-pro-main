@@ -82,6 +82,7 @@ export const adminUpdateStatus = createServerFn({ method: "POST" })
           "approved",
           "rejected",
           "completed",
+          "refund",
         ]),
         status_reason: z.string().optional(),
       })
@@ -146,6 +147,25 @@ export const adminAddNote = createServerFn({ method: "POST" })
       author_id: context.userId,
     });
     if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const adminDeleteApplication = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context);
+    const { error } = await context.supabase
+      .from("pan_applications")
+      .delete()
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    await context.supabase.from("activity_logs").insert({
+      actor_id: context.userId,
+      action: "application_delete",
+      entity_type: "application",
+      entity_id: data.id,
+    });
     return { ok: true };
   });
 

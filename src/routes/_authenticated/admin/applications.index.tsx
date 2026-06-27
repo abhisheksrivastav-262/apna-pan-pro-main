@@ -1,13 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { adminListApplications } from "@/lib/admin.functions";
+import { adminListApplications, adminDeleteApplication } from "@/lib/admin.functions";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Download, Search, RefreshCw, FileX } from "lucide-react";
+import { Download, Search, RefreshCw, FileX, Trash2, Loader2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/admin/applications/")({
   component: ApplicationsPage,
@@ -39,7 +40,10 @@ const statusVariants: Record<string, string> = {
   under_verification: "bg-violet-500/15 text-violet-700 border-violet-500/30",
   payment_pending: "bg-orange-500/15 text-orange-700 border-orange-500/30",
   need_more_documents: "bg-pink-500/15 text-pink-700 border-pink-500/30",
+  refund: "bg-fuchsia-500/15 text-fuchsia-700 border-fuchsia-500/30",
 };
+
+const formatDateIST = (dateStr: string) => new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(dateStr));
 
 function ApplicationsPage() {
   const fn = useServerFn(adminListApplications);
@@ -49,6 +53,24 @@ function ApplicationsPage() {
   });
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  
+  const qc = useQueryClient();
+  const deleteFn = useServerFn(adminDeleteApplication);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  async function deleteApp(id: string) {
+    if (!confirm("Are you sure you want to permanently delete this application?")) return;
+    setDeletingId(id);
+    try {
+      await deleteFn({ data: { id } });
+      toast.success("Application deleted");
+      qc.invalidateQueries({ queryKey: ["admin-applications"] });
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   const rows = useMemo(() => {
     const list = data ?? [];
@@ -70,7 +92,7 @@ function ApplicationsPage() {
 
   function exportCsv() {
     const list = rows;
-    const headers = ["App No", "Name", "Mobile", "Email", "District", "Status", "Payment", "Date"];
+    const headers = ["App No", "Name", "Mobile", "Email", "Status", "Payment", "Date"];
     const csv = [headers.join(",")]
       .concat(
         list.map((r: any) =>
@@ -79,7 +101,6 @@ function ApplicationsPage() {
             r.full_name,
             r.customer_mobile,
             r.email,
-            r.district,
             r.application_status,
             r.payment_verified_at ? "verified" : "pending",
             new Date(r.created_at).toISOString(),
@@ -144,7 +165,6 @@ function ApplicationsPage() {
               <TableHead>Name</TableHead>
               <TableHead>Cust Mobile</TableHead>
               <TableHead>Agency Mobile</TableHead>
-              <TableHead>District</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Payment</TableHead>
               <TableHead>Date</TableHead>
@@ -154,44 +174,44 @@ function ApplicationsPage() {
           <TableBody>
             {isLoading
               ? Array.from({ length: 6 }).map((_, i) => (
-                  <TableRow key={i} className="hover:bg-transparent">
-                    {Array.from({ length: 8 }).map((_, j) => (
-                      <TableCell key={j}>
-                        <Skeleton className="h-6 w-full opacity-60" />
-                      </TableCell>
-                    ))}
-                    <TableCell>
-                      <Skeleton className="h-6 w-12 opacity-60" />
+                <TableRow key={i} className="hover:bg-transparent">
+                  {Array.from({ length: 8 }).map((_, j) => (
+                    <TableCell key={j}>
+                      <Skeleton className="h-6 w-full opacity-60" />
                     </TableCell>
-                  </TableRow>
-                ))
+                  ))}
+                  <TableCell>
+                    <Skeleton className="h-6 w-12 opacity-60" />
+                  </TableCell>
+                </TableRow>
+              ))
               : rows.map((r: any) => (
-                  <TableRow key={r.id}>
-                    <TableCell className="font-mono text-xs">{r.application_no || "—"}</TableCell>
-                    <TableCell className="font-medium">{r.full_name}</TableCell>
-                    <TableCell>{r.customer_mobile}</TableCell>
-                    <TableCell>{r.agency_mobile || "—"}</TableCell>
-                    <TableCell>{r.district}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={statusVariants[r.application_status] ?? ""}>
-                        {r.application_status?.replace(/_/g, " ")}
+                <TableRow key={r.id}>
+                  <TableCell className="font-mono text-xs">{r.application_no || "—"}</TableCell>
+                  <TableCell className="font-medium">{r.full_name}</TableCell>
+                  <TableCell>{r.customer_mobile}</TableCell>
+                  <TableCell>{r.agency_mobile || "—"}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={statusVariants[r.application_status] ?? ""}>
+                      {r.application_status?.replace(/_/g, " ")}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {r.payment_verified_at ? (
+                      <Badge variant="outline" className={statusVariants.verified}>
+                        Verified
                       </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {r.payment_verified_at ? (
-                        <Badge variant="outline" className={statusVariants.verified}>
-                          Verified
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className={statusVariants.pending}>
-                          Pending
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {new Date(r.created_at).toLocaleDateString("en-IN")}
-                    </TableCell>
-                    <TableCell>
+                    ) : (
+                      <Badge variant="outline" className={statusVariants.pending}>
+                        Pending
+                      </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground whitespace-nowrap">
+                    {formatDateIST(r.created_at)}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
                       <Link
                         to="/admin/applications/$id"
                         params={{ id: r.id }}
@@ -199,16 +219,25 @@ function ApplicationsPage() {
                       >
                         View
                       </Link>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      <button
+                        onClick={() => deleteApp(r.id)}
+                        disabled={deletingId === r.id}
+                        className="text-destructive hover:bg-destructive/10 p-1.5 rounded-md transition-colors"
+                        title="Delete Application"
+                      >
+                        {deletingId === r.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
             {!isLoading && rows.length === 0 && (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={9} className="p-0">
-                  <EmptyState 
-                    icon={FileX} 
-                    title="No applications found" 
-                    description={q || statusFilter !== 'all' ? "Try adjusting your search filters to find what you're looking for." : "When customers submit new PAN applications, they will appear here."} 
+                <TableCell colSpan={8} className="p-0">
+                  <EmptyState
+                    icon={FileX}
+                    title="No applications found"
+                    description={q || statusFilter !== 'all' ? "Try adjusting your search filters to find what you're looking for." : "When customers submit new PAN applications, they will appear here."}
                   />
                 </TableCell>
               </TableRow>
