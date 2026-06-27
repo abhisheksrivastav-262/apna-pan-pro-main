@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Download, Search, RefreshCw } from "lucide-react";
+import { Download, Search, RefreshCw, FileX } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export const Route = createFileRoute("/_authenticated/admin/applications/")({
   component: ApplicationsPage,
@@ -153,9 +154,14 @@ function ApplicationsPage() {
           <TableBody>
             {isLoading
               ? Array.from({ length: 6 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell colSpan={9}>
-                      <Skeleton className="h-8 w-full" />
+                  <TableRow key={i} className="hover:bg-transparent">
+                    {Array.from({ length: 8 }).map((_, j) => (
+                      <TableCell key={j}>
+                        <Skeleton className="h-6 w-full opacity-60" />
+                      </TableCell>
+                    ))}
+                    <TableCell>
+                      <Skeleton className="h-6 w-12 opacity-60" />
                     </TableCell>
                   </TableRow>
                 ))
@@ -197,9 +203,13 @@ function ApplicationsPage() {
                   </TableRow>
                 ))}
             {!isLoading && rows.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={9} className="text-center text-muted-foreground py-12">
-                  No applications found.
+              <TableRow className="hover:bg-transparent">
+                <TableCell colSpan={9} className="p-0">
+                  <EmptyState 
+                    icon={FileX} 
+                    title="No applications found" 
+                    description={q || statusFilter !== 'all' ? "Try adjusting your search filters to find what you're looking for." : "When customers submit new PAN applications, they will appear here."} 
+                  />
                 </TableCell>
               </TableRow>
             )}

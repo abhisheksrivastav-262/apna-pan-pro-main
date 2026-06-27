@@ -11,7 +11,11 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableRow,
 } from "@/components/ui/table";
+import { Users } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export const Route = createFileRoute("/_authenticated/admin/customers")({
   component: CustomersPage,
@@ -71,9 +75,23 @@ function CustomersPage() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                  Loading…
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i} className="hover:bg-transparent">
+                  {Array.from({ length: 7 }).map((_, j) => (
+                    <TableCell key={j}>
+                      <Skeleton className="h-6 w-full opacity-60" />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : customers.length === 0 ? (
+              <TableRow className="hover:bg-transparent">
+                <TableCell colSpan={7} className="p-0">
+                  <EmptyState 
+                    icon={Users} 
+                    title="No customers found" 
+                    description="Customer records will automatically populate here once applications are submitted." 
+                  />
                 </TableCell>
               </TableRow>
             ) : (

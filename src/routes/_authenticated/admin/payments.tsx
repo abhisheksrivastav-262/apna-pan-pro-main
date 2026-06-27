@@ -20,8 +20,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { CheckCircle2, ExternalLink, XCircle, Image as ImageIcon } from "lucide-react";
+import { CheckCircle2, ExternalLink, XCircle, Image as ImageIcon, IndianRupee } from "lucide-react";
 import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export const Route = createFileRoute("/_authenticated/admin/payments")({
   component: PaymentsPage,
@@ -70,9 +72,29 @@ function PaymentsPage() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                  Loading…
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i} className="hover:bg-transparent">
+                  {Array.from({ length: 6 }).map((_, j) => (
+                    <TableCell key={j}>
+                      <Skeleton className="h-6 w-full opacity-60" />
+                    </TableCell>
+                  ))}
+                  <TableCell>
+                    <div className="flex gap-2">
+                      <Skeleton className="h-8 w-8 opacity-60 rounded-md" />
+                      <Skeleton className="h-8 w-20 opacity-60 rounded-md" />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : rows.length === 0 ? (
+              <TableRow className="hover:bg-transparent">
+                <TableCell colSpan={7} className="p-0">
+                  <EmptyState 
+                    icon={IndianRupee} 
+                    title="No payments found" 
+                    description="When customers submit applications with payments, they will appear here." 
+                  />
                 </TableCell>
               </TableRow>
             ) : (

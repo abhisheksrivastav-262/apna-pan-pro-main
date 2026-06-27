@@ -21,7 +21,10 @@ import {
   Phone,
   MapPin,
   Calendar,
+  FolderOpen,
 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export const Route = createFileRoute("/_authenticated/admin/documents/")({
   component: DocsPage,
@@ -153,8 +156,25 @@ function DocsPage() {
       </div>
       
       {isLoading ? (
-        <div className="py-12 text-center text-muted-foreground animate-pulse">
-          Loading documents...
+        <div className="space-y-6">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i} className="overflow-hidden">
+              <div className="bg-muted/30 px-5 py-4 border-b flex items-center justify-between">
+                <div className="space-y-2">
+                  <Skeleton className="h-5 w-48" />
+                  <Skeleton className="h-3 w-64" />
+                </div>
+                <Skeleton className="h-6 w-24 rounded-full" />
+              </div>
+              <div className="p-5">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                  {Array.from({ length: 5 }).map((_, j) => (
+                    <Skeleton key={j} className="aspect-[4/3] w-full rounded-lg" />
+                  ))}
+                </div>
+              </div>
+            </Card>
+          ))}
         </div>
       ) : (
         <div className="space-y-6">
@@ -190,8 +210,12 @@ function DocsPage() {
             </Card>
           ))}
           {rows.length === 0 && (
-            <div className="text-muted-foreground text-center py-12 border rounded-lg bg-muted/10">
-              No applications or documents found.
+            <div className="border rounded-lg bg-card">
+              <EmptyState 
+                icon={FolderOpen} 
+                title="No documents found" 
+                description="There are currently no applications with uploaded documents to display." 
+              />
             </div>
           )}
         </div>

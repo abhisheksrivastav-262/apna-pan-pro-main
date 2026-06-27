@@ -234,8 +234,9 @@ function AppDetail() {
 
   if (isLoading || !data) {
     return (
-      <div className="flex items-center gap-2 text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+      <div className="flex flex-col items-center justify-center min-h-[400px] text-muted-foreground animate-in fade-in-50">
+        <Loader2 className="h-8 w-8 animate-spin mb-4 text-primary/60" />
+        <p className="text-sm">Loading application details...</p>
       </div>
     );
   }
