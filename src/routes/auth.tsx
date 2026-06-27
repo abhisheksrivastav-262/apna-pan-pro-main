@@ -128,9 +128,7 @@ function AuthPage() {
               "Sign in"
             )}
           </Button>
-          <p className="text-center text-xs text-muted-foreground">
-            Demo: misbahur@admin.com / admin123
-          </p>
+
         </form>
       </div>
     </div>
